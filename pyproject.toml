@@ -16,14 +16,14 @@ classifiers = [
 python = "^3.8"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "*"
-tox = "*"
-pytest-pylint = "*"
-pylint-quotes = "*"
-pytest-mypy = "*"
-pytest-black = "*"
-pytest-bandit = "*"
-tox-poetry = "*"
+pytest = "^7.2.1"
+tox = "^4.3.5"
+pytest-pylint = "^0.19.0"
+pylint-quotes = "^0.2.3"
+pytest-mypy = "^0.10.3"
+pytest-black = "^0.3.12"
+pytest-bandit = "^0.6.1"
+tox-poetry = "^0.4.1"
 
 [tool.pytest.ini_options]
 testpaths = [
