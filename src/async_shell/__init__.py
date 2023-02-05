@@ -1,7 +1,6 @@
 """Asyncio subprocess shell command wrapper"""
 from __future__ import annotations
 
-import os
 import textwrap
 import time
 import typing as t
@@ -10,6 +9,9 @@ from asyncio.subprocess import create_subprocess_shell, Process  # noqa
 from dataclasses import dataclass
 from subprocess import PIPE
 
+from classlogging import LoggerMixin
+
+from .constants import IS_WIN32
 from .version import __version__
 
 ST = t.TypeVar("ST", bound="Shell")
@@ -54,8 +56,10 @@ class ShellResult:
         return self
 
 
-class Shell(t.Awaitable[ShellResult]):
+class Shell(t.Awaitable[ShellResult], LoggerMixin):
     """Asyncio subprocess wrapper"""
+
+    _DEFAULT_ENCODING: str = "cp866" if IS_WIN32 else "utf-8"
 
     def __init__(
         self,
@@ -64,7 +68,7 @@ class Shell(t.Awaitable[ShellResult]):
     ) -> None:
         self._command: str = command
         self._proc: t.Optional[Process] = None
-        self._encoding: str = encoding or ("cp866" if os.name == "nt" else "utf-8")
+        self._encoding: str = encoding or self._DEFAULT_ENCODING
         self._start_time: t.Optional[float] = None
         self._post_validate: bool = False
 
@@ -76,6 +80,7 @@ class Shell(t.Awaitable[ShellResult]):
     async def _get_proc(self) -> Process:
         if self._proc is None:
             self._start_time = time.perf_counter()
+            self.logger.trace(f"Starting subprocess: {self._command!r}")
             self._proc = await create_subprocess_shell(
                 cmd=self._command,
                 stdin=None,
@@ -115,14 +120,16 @@ class Shell(t.Awaitable[ShellResult]):
         # pylint: disable=no-member
         return self._await().__await__()
 
-    def __or__(self, other: Shell) -> Shell:
+    def __or__(self: ST, other: ST) -> ST:
+        if self.__class__ is not other.__class__:
+            raise TypeError(f"Can't combine {self.__class__} and {other.__class__}")
         if self._encoding != other._encoding:
             raise ValueError(f"Encoding mismatch: {self._encoding!r} != {other._encoding!r}")
         if self._start_time is not None:
             raise RuntimeError(f"Process {self} has already been started")
         if other._start_time is not None:
             raise RuntimeError(f"Process {other} has already been started")
-        result = Shell(command=f"{self._command} | {other._command}", encoding=self._encoding)
+        result = self.__class__(command=f"{self._command} | {other._command}", encoding=self._encoding)
         if self._post_validate or other._post_validate:
             result.validate()
         return result
