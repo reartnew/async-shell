@@ -18,13 +18,12 @@ classlogging = "^1.0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
-tox = "^4.3.5"
+tox = "^3.28.0"
 pytest-pylint = "^0.19.0"
 pylint-quotes = "^0.2.3"
 pytest-mypy = "^0.10.3"
 pytest-black = "^0.3.12"
 pytest-bandit = "^0.6.1"
-tox-poetry = "^0.4.1"
 pytest-data-suites = "^1.0.4"
 pytest-asyncio = "^0.20.3"
 
@@ -116,7 +115,7 @@ check-str-concat-over-line-jumps = "no"
 
 [tool.pylint.TYPECHECK]
 contextmanager-decorators = ["contextlib.contextmanager"]
-ignore-mixin-members = "yes"
+ignore-checks-for-mixin = "yes"
 ignore-none = "no"
 ignore-on-opaque-inference = "yes"
 ignored-classes = [
@@ -172,6 +171,6 @@ analyse-fallback-blocks = "yes"
 
 [tool.pylint.EXCEPTIONS]
 overgeneral-exceptions = [
-    "BaseException",
-    "Exception",
+    "builtins.BaseException",
+    "builtins.Exception",
 ]

@@ -7,7 +7,7 @@ import typing as t
 from asyncio.streams import StreamReader
 from asyncio.subprocess import create_subprocess_shell, Process  # noqa
 from dataclasses import dataclass
-from subprocess import PIPE
+from subprocess import PIPE  # nosec
 
 from classlogging import LoggerMixin
 
