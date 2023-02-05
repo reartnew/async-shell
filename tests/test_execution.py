@@ -1,6 +1,7 @@
 """Shell evaluation tests"""
 from __future__ import annotations
 
+import os
 from typing import TypedDict
 
 import pytest
@@ -49,3 +50,12 @@ async def test_async_subprocess_call(command: str) -> None:
     """Test simple call"""
     os_result = await Shell(command)
     assert not os_result.code
+
+
+@ShellDataSuite.parametrize
+@pytest.mark.asyncio
+@pytest.mark.parametrize("strip_linesep", [True, False], ids=["with-strip", "without-strip"])
+async def test_stream_reader(command: str, strip_linesep: bool) -> None:
+    """Validate stdout reader"""
+    async for line in Shell(command).read_stdout(strip_linesep=strip_linesep):
+        assert line.endswith(os.linesep) != strip_linesep

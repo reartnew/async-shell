@@ -1,6 +1,7 @@
 """Asyncio subprocess shell command wrapper"""
 from __future__ import annotations
 
+import os
 import textwrap
 import time
 import typing as t
@@ -60,6 +61,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
     """Asyncio subprocess wrapper"""
 
     _DEFAULT_ENCODING: str = "cp866" if IS_WIN32 else "utf-8"
+    _BYTES_LINESEP: bytes = os.linesep.encode()
 
     def __init__(
         self,
@@ -89,18 +91,22 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
             )
         return self._proc
 
-    async def read_stdout(self) -> t.AsyncGenerator[str, None]:
+    async def read_stdout(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
         """Run through stdout data and yield decoded strings line by line"""
         proc: Process = await self._get_proc()
         stdout: StreamReader = proc.stdout  # type: ignore
         async for chunk in stdout:  # type: bytes
+            if strip_linesep:
+                chunk = chunk.rstrip(self._BYTES_LINESEP)
             yield chunk.decode(self._encoding)
 
-    async def read_stderr(self) -> t.AsyncGenerator[str, None]:
+    async def read_stderr(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
         """Same as .read_stdout(), but for stderr"""
         proc: Process = await self._get_proc()
         stderr: StreamReader = proc.stderr  # type: ignore
         async for chunk in stderr:  # type: bytes
+            if strip_linesep:
+                chunk = chunk.rstrip(self._BYTES_LINESEP)
             yield chunk.decode(self._encoding)
 
     async def _await(self) -> ShellResult:
