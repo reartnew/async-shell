@@ -38,6 +38,11 @@ addopts = """
 --bandit
 """
 bandit_targets = ["src"]
+filterwarnings = [
+    "error",
+    "ignore::builtins.DeprecationWarning",
+    "ignore::pytest.PytestWarning",
+]
 
 [tool.black]
 line-length = 120
