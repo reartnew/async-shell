@@ -8,14 +8,25 @@ import pytest
 
 from async_shell import Shell, ShellResult
 
-TEST_COMMAND: str = "echo a && echo b"
+TEST_ECHO_COMMAND: str = "echo a && echo b"
 
 
 @pytest.mark.asyncio
 async def test_async_subprocess_call() -> None:
     """Test simple call"""
-    os_result = await Shell(TEST_COMMAND)
+    process = Shell(TEST_ECHO_COMMAND)
+    os_result = await process
     assert not os_result.code
+    assert not process.was_stopped
+
+
+@pytest.mark.asyncio
+async def test_finalizer() -> None:
+    """Test process premature finalizer"""
+    process = Shell("sleep 10000")
+    async with process:
+        assert process.pid > 0
+    assert process.was_stopped
 
 
 @pytest.mark.asyncio
@@ -23,8 +34,8 @@ async def test_async_subprocess_call() -> None:
 async def test_stream_reader(strip_linesep: bool) -> None:
     """Validate stdout reader"""
     lines: t.List[str] = []
-    async for line in Shell(TEST_COMMAND).read_stdout(strip_linesep=strip_linesep):
+    async for line in Shell(TEST_ECHO_COMMAND).read_stdout(strip_linesep=strip_linesep):
         assert line.endswith(os.linesep) != strip_linesep
         lines.append(line.rstrip())
-    clean_result: ShellResult = await Shell(TEST_COMMAND).validate()
+    clean_result: ShellResult = await Shell(TEST_ECHO_COMMAND).validate()
     assert lines == clean_result.stdout.splitlines()

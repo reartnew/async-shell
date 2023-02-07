@@ -62,6 +62,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
 
     _DEFAULT_ENCODING: str = "cp866" if IS_WIN32 else "utf-8"
     _BYTES_LINESEP: bytes = os.linesep.encode()
+    MISSING_PROCESS_PID: int = -1
 
     def __init__(
         self,
@@ -73,6 +74,17 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self._encoding: str = encoding or self._DEFAULT_ENCODING
         self._start_time: t.Optional[float] = None
         self._post_validate: bool = False
+        self._was_stopped: bool = False
+
+    @property
+    def was_stopped(self) -> bool:
+        """Tell if the process was stopped during execution"""
+        return self._was_stopped
+
+    @property
+    def pid(self) -> int:
+        """Return underlying process PID, if any, or MISSING_PROCESS_PID otherwise"""
+        return self.MISSING_PROCESS_PID if self._proc is None else self._proc.pid
 
     def validate(self) -> Shell:
         """Mark shell subprocess as requiring validation after evaluation"""
@@ -89,6 +101,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
                 stdout=PIPE,
                 stderr=PIPE,
             )
+        self.logger.debug(f"Started process with PID {self.pid}")
         return self._proc
 
     async def read_stdout(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
@@ -110,6 +123,12 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
             yield chunk.decode(self._encoding)
 
     async def _await(self) -> ShellResult:
+        try:
+            return await self._run()
+        finally:
+            await self._finalize()
+
+    async def _run(self) -> ShellResult:
         proc: Process = await self._get_proc()  # type: ignore
         stdout_bytes, stderr_bytes = await proc.communicate()
         result = ShellResult(
@@ -126,24 +145,31 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         # pylint: disable=no-member
         return self._await().__await__()
 
-    def __or__(self: ST, other: ST) -> ST:
-        if self.__class__ is not other.__class__:
-            raise TypeError(f"Can't combine {self.__class__} and {other.__class__}")
-        if self._encoding != other._encoding:
-            raise ValueError(f"Encoding mismatch: {self._encoding!r} != {other._encoding!r}")
-        if self._start_time is not None:
-            raise RuntimeError(f"Process {self} has already been started")
-        if other._start_time is not None:
-            raise RuntimeError(f"Process {other} has already been started")
-        result = self.__class__(command=f"{self._command} | {other._command}", encoding=self._encoding)
-        if self._post_validate or other._post_validate:
-            result.validate()
-        return result
-
     async def __aenter__(self: ST) -> ST:
         await self._get_proc()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
-        # TODO: graceful finish
+        await self._finalize()
         return exc_type is None
+
+    def poll(self) -> bool:
+        """Check if the subprocess has finished"""
+        return self._proc is not None and self._proc.returncode is not None
+
+    async def _finalize(self) -> None:
+        if self._proc is None:
+            self.logger.warning("Finalizing non-started process")
+            return
+        self.logger.debug(f"Finalizing process with PID {self.pid}")
+        if self._proc.returncode is None:
+            self.logger.trace(f"Killing process with PID {self.pid}")
+            self._proc.kill()
+            self._was_stopped = True
+        # Close communication anyway
+        await self._proc.communicate()
+        for stream in (self._proc.stdout, self._proc.stderr, self._proc.stdin):
+            if stream is None:
+                continue
+            self.logger.trace(f"Closing stream: {stream}")
+            stream._transport.close()  # type: ignore[union-attr]  # pylint: disable=protected-access
