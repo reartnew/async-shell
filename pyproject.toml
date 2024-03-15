@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async-shell"
-version = "1.0.2"
+version = "1.0.4"
 description = "Asyncio subprocess shell command wrapper"
 license = "MIT"
 authors = [
@@ -14,7 +14,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-classlogging = "^1.0.2"
+classlogging = "^1.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
@@ -25,6 +25,8 @@ pytest-mypy = "^0.10.3"
 pytest-black = "^0.3.12"
 pytest-bandit = "^0.6.1"
 pytest-asyncio = "^0.20.3"
+pyyaml = "^6.0.1"
+setuptools = "^69.1.0"
 
 [tool.pytest.ini_options]
 testpaths = [

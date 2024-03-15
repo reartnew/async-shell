@@ -1,4 +1,5 @@
 """Asyncio subprocess shell command wrapper"""
+
 from __future__ import annotations
 
 import os
@@ -30,11 +31,11 @@ class ShellError(Exception):
     _prefix: str = "    "
 
     def __init__(self, result: ShellResult) -> None:
-        msg: str = f"Subprocess failed with code: {result.code}\n"
+        msg: str = f"Subprocess failed with code: {result.code}"
         if result.stdout:
-            msg += f"{self._prefix}PROCESS STDOUT:\n{textwrap.indent(result.stdout, self._prefix * 2)}\n"
+            msg += f"\n{self._prefix}PROCESS STDOUT:\n{textwrap.indent(result.stdout, self._prefix * 2)}"
         if result.stderr:
-            msg += f"{self._prefix}PROCESS STDERR:\n{textwrap.indent(result.stderr, self._prefix * 2)}\n"
+            msg += f"{self._prefix}PROCESS STDERR:\n{textwrap.indent(result.stderr, self._prefix * 2)}"
         super().__init__(msg)
 
 
@@ -68,6 +69,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self,
         command: str,
         encoding: t.Optional[str] = None,
+        environment: t.Optional[t.Dict[str, str]] = None,
     ) -> None:
         self._command: str = command
         self._proc: t.Optional[Process] = None
@@ -75,6 +77,8 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self._start_time: t.Optional[float] = None
         self._post_validate: bool = False
         self._was_stopped: bool = False
+        self._was_finalized: bool = False
+        self._env: t.Optional[t.Dict[str, str]] = environment
 
     @property
     def was_stopped(self) -> bool:
@@ -100,8 +104,9 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
                 stdin=None,
                 stdout=PIPE,
                 stderr=PIPE,
+                env=self._env,
             )
-        self.logger.debug(f"Started process with PID {self.pid}")
+            self.logger.debug(f"Started process with PID {self.pid}")
         return self._proc
 
     async def read_stdout(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
@@ -158,6 +163,8 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         return self._proc is not None and self._proc.returncode is not None
 
     async def _finalize(self) -> None:
+        if self._was_finalized:
+            return
         if self._proc is None:
             self.logger.warning("Finalizing non-started process")
             return
@@ -173,3 +180,4 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
                 continue
             self.logger.trace(f"Closing stream: {stream}")
             stream._transport.close()  # type: ignore[union-attr]  # pylint: disable=protected-access
+        self._was_finalized = True

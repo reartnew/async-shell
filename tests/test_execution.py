@@ -1,4 +1,5 @@
 """Shell evaluation tests"""
+
 from __future__ import annotations
 
 import os
@@ -6,7 +7,7 @@ import typing as t
 
 import pytest
 
-from async_shell import Shell, ShellResult
+from async_shell import Shell, ShellResult, constants
 
 TEST_ECHO_COMMAND: str = "echo a && echo b"
 
@@ -27,6 +28,17 @@ async def test_finalizer() -> None:
     async with process:
         assert process.pid > 0
     assert process.was_stopped
+
+
+@pytest.mark.asyncio
+async def test_env() -> None:
+    """Test process environment passing"""
+    async with Shell(
+        command="echo %ASYNC_SHELL_TEST_VAR%" if constants.IS_WIN32 else "echo $ASYNC_SHELL_TEST_VAR",
+        environment={"ASYNC_SHELL_TEST_VAR": "Foo"},
+    ) as process:
+        result = await process.validate()
+        assert result.stdout == "Foo\n"
 
 
 @pytest.mark.asyncio
