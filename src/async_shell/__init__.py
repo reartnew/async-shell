@@ -70,6 +70,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         command: str,
         encoding: t.Optional[str] = None,
         environment: t.Optional[t.Dict[str, str]] = None,
+        cwd: t.Optional[str] = None,
     ) -> None:
         self._command: str = command
         self._proc: t.Optional[Process] = None
@@ -79,6 +80,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self._was_stopped: bool = False
         self._was_finalized: bool = False
         self._env: t.Optional[t.Dict[str, str]] = environment
+        self._cwd: t.Optional[str] = cwd
 
     @property
     def was_stopped(self) -> bool:
@@ -105,6 +107,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
                 stdout=PIPE,
                 stderr=PIPE,
                 env=self._env,
+                cwd=self._cwd,
             )
             self.logger.debug(f"Started process with PID {self.pid}")
         return self._proc
