@@ -22,6 +22,7 @@ __all__ = [
     "ShellResult",
     "ShellError",
     "Shell",
+    "check_output",
 ]
 
 
@@ -184,3 +185,22 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
             self.logger.trace(f"Closing stream: {stream}")
             stream._transport.close()  # type: ignore[union-attr]  # pylint: disable=protected-access
         self._was_finalized = True
+
+
+async def check_output(
+    command: str,
+    encoding: t.Optional[str] = None,
+    environment: t.Optional[t.Dict[str, str]] = None,
+    cwd: t.Optional[str] = None,
+) -> str:
+    """Run shell with arguments and return its output.
+    If the exit code was non-zero it raises a ShellError.
+    The arguments are the same as for the Shell constructor."""
+    async with Shell(
+        command=command,
+        encoding=encoding,
+        environment=environment,
+        cwd=cwd,
+    ) as process:
+        result = await process.validate()
+    return result.stdout

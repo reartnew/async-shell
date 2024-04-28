@@ -7,7 +7,13 @@ import typing as t
 
 import pytest
 
-from async_shell import Shell, ShellResult, constants
+from async_shell import (
+    Shell,
+    ShellResult,
+    constants,
+    check_output,
+    ShellError,
+)
 
 TEST_ECHO_COMMAND: str = "echo a && echo b"
 
@@ -51,3 +57,16 @@ async def test_stream_reader(strip_linesep: bool) -> None:
         lines.append(line.rstrip())
     clean_result: ShellResult = await Shell(TEST_ECHO_COMMAND).validate()
     assert lines == clean_result.stdout.splitlines()
+
+
+@pytest.mark.asyncio
+async def test_check_output_ok() -> None:
+    """Test check_output function good call"""
+    assert await check_output(TEST_ECHO_COMMAND) == "a\nb\n"
+
+
+@pytest.mark.asyncio
+async def test_check_output_fail() -> None:
+    """Test check_output function bad call"""
+    with pytest.raises(ShellError, match="foobar: command not found"):
+        assert await check_output("foobar")
