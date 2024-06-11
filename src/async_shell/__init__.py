@@ -36,7 +36,7 @@ class ShellError(Exception):
         if result.stdout:
             msg += f"\n{self._prefix}PROCESS STDOUT:\n{textwrap.indent(result.stdout, self._prefix * 2)}"
         if result.stderr:
-            msg += f"{self._prefix}PROCESS STDERR:\n{textwrap.indent(result.stderr, self._prefix * 2)}"
+            msg += f"\n{self._prefix}PROCESS STDERR:\n{textwrap.indent(result.stderr, self._prefix * 2)}"
         super().__init__(msg)
 
 

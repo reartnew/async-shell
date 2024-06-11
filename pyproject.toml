@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async-shell"
-version = "1.0.6"
+version = "1.0.7"
 description = "Asyncio subprocess shell command wrapper"
 license = "MIT"
 authors = [
