@@ -70,3 +70,10 @@ async def test_check_output_fail() -> None:
     """Test check_output function bad call"""
     with pytest.raises(ShellError, match="foobar: command not found"):
         assert await check_output("foobar")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("executable", [None, "/bin/sh", "/bin/bash"])
+async def test_specific_shells(executable: str) -> None:
+    """Test specifying a shell executable"""
+    await check_output("echo foo", executable=executable)

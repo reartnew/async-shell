@@ -72,6 +72,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         encoding: t.Optional[str] = None,
         environment: t.Optional[t.Dict[str, str]] = None,
         cwd: t.Optional[str] = None,
+        executable: t.Optional[str] = None,
     ) -> None:
         self._command: str = command
         self._proc: t.Optional[Process] = None
@@ -82,6 +83,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self._was_finalized: bool = False
         self._env: t.Optional[t.Dict[str, str]] = environment
         self._cwd: t.Optional[str] = cwd
+        self._executable: t.Optional[str] = executable
 
     @property
     def was_stopped(self) -> bool:
@@ -109,6 +111,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
                 stderr=PIPE,
                 env=self._env,
                 cwd=self._cwd,
+                executable=self._executable,
             )
             self.logger.debug(f"Started process with PID {self.pid}")
         return self._proc
@@ -192,6 +195,7 @@ async def check_output(
     encoding: t.Optional[str] = None,
     environment: t.Optional[t.Dict[str, str]] = None,
     cwd: t.Optional[str] = None,
+    executable: t.Optional[str] = None,
 ) -> str:
     """Run shell with arguments and return its output.
     If the exit code was non-zero it raises a ShellError.
@@ -201,6 +205,7 @@ async def check_output(
         encoding=encoding,
         environment=environment,
         cwd=cwd,
+        executable=executable,
     ) as process:
         result = await process.validate()
     return result.stdout
