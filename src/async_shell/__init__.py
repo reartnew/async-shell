@@ -100,13 +100,14 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         self._post_validate = True
         return self
 
-    async def _get_proc(self) -> Process:
+    async def start(self) -> Process:
+        """Make sure the underlying subprocess shell has started"""
         if self._proc is None:
             self._start_time = time.perf_counter()
             self.logger.trace(f"Starting subprocess: {self._command!r}")
             self._proc = await create_subprocess_shell(
                 cmd=self._command,
-                stdin=None,
+                stdin=PIPE,
                 stdout=PIPE,
                 stderr=PIPE,
                 env=self._env,
@@ -118,7 +119,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
 
     async def read_stdout(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
         """Run through stdout data and yield decoded strings line by line"""
-        proc: Process = await self._get_proc()
+        proc: Process = await self.start()
         stdout: StreamReader = proc.stdout  # type: ignore
         async for chunk in stdout:  # type: bytes
             if strip_linesep:
@@ -127,21 +128,31 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
 
     async def read_stderr(self, strip_linesep: bool = True) -> t.AsyncGenerator[str, None]:
         """Same as .read_stdout(), but for stderr"""
-        proc: Process = await self._get_proc()
+        proc: Process = await self.start()
         stderr: StreamReader = proc.stderr  # type: ignore
         async for chunk in stderr:  # type: bytes
             if strip_linesep:
                 chunk = chunk.rstrip(self._BYTES_LINESEP)
             yield chunk.decode(self._encoding)
 
+    async def write_to_stdin(self, data: str) -> None:
+        """Put data to the process stdin"""
+        subprocess: Process = await self.start()
+        subprocess.stdin.write(data.encode(self._encoding))  # type: ignore[union-attr]
+
+    async def write_eof_to_stdin(self) -> None:
+        """Put EOF to the process stdin"""
+        subprocess: Process = await self.start()
+        subprocess.stdin.write_eof()  # type: ignore[union-attr]
+
     async def _await(self) -> ShellResult:
         try:
             return await self._run()
         finally:
-            await self._finalize()
+            await self.finalize()
 
     async def _run(self) -> ShellResult:
-        proc: Process = await self._get_proc()  # type: ignore
+        proc: Process = await self.start()  # type: ignore
         stdout_bytes, stderr_bytes = await proc.communicate()
         result = ShellResult(
             stdout=stdout_bytes.decode(self._encoding),
@@ -158,18 +169,19 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
         return self._await().__await__()
 
     async def __aenter__(self: ST) -> ST:
-        await self._get_proc()
+        await self.start()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool:
-        await self._finalize()
+        await self.finalize()
         return exc_type is None
 
     def poll(self) -> bool:
         """Check if the subprocess has finished"""
         return self._proc is not None and self._proc.returncode is not None
 
-    async def _finalize(self) -> None:
+    async def finalize(self) -> None:
+        """Make sure the process has been properly reaped"""
         if self._was_finalized:
             return
         if self._proc is None:

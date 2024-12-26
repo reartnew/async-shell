@@ -77,3 +77,13 @@ async def test_check_output_fail() -> None:
 async def test_specific_shells(executable: str) -> None:
     """Test specifying a shell executable"""
     await check_output("echo foo", executable=executable)
+
+
+@pytest.mark.asyncio
+async def test_stdin() -> None:
+    """Test specifying a shell executable"""
+    async with Shell("cat") as process:
+        await process.write_to_stdin("test")
+        await process.write_eof_to_stdin()
+        res = await process.validate()
+    assert res.stdout == "test"
