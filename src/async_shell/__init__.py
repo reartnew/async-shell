@@ -69,6 +69,7 @@ class Shell(t.Awaitable[ShellResult], LoggerMixin):
     def __init__(
         self,
         command: str,
+        *,
         encoding: t.Optional[str] = None,
         environment: t.Optional[t.Dict[str, str]] = None,
         cwd: t.Optional[str] = None,

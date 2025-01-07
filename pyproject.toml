@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async-shell"
-version = "1.0.9"
+version = "1.1.0"
 description = "Asyncio subprocess shell command wrapper"
 license = "MIT"
 authors = [
@@ -13,20 +13,38 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-classlogging = "^1.1.1"
+python = "^3.9"
+classlogging = "^1.2.0"
+# Tests dependencies
+pytest = { version = "^8.3.4", optional = true }
+pytest-pylint = { version = "^0.21.0", optional = true }
+pytest-mypy = { version = "^0.10.3", optional = true }
+pytest-black = { version = "^0.6.0", optional = true }
+pytest-bandit = { version = "^0.6.1", optional = true }
+pytest-asyncio = { version = "^0.25.1", optional = true }
+pylint = { version = "^3.3.3", optional = true }
+
+[tool.poetry.extras]
+tests = [
+    "pytest",
+    "pytest-pylint",
+    "pytest-mypy",
+    "pytest-black",
+    "pytest-bandit",
+    "pytest-asyncio",
+    "pylint",
+]
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.2.1"
-tox = "^3.28.0"
-pytest-pylint = "^0.19.0"
-pylint-quotes = "^0.2.3"
-pytest-mypy = "^0.10.3"
-pytest-black = "^0.3.12"
-pytest-bandit = "^0.6.1"
-pytest-asyncio = "^0.20.3"
-pyyaml = "^6.0.1"
-setuptools = "^69.1.0"
+tox = "^4.23.2"
+setuptools = "^75.7.0"
+
+[tool.tox]
+envlist = ["py39", "py310", "py311", "py312", "py313"]
+
+[tool.tox.env_run_base]
+extras = ["tests"]
+commands = [["pytest"]]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -56,7 +74,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pylint.MASTER]
 fail-under = 10.0
 jobs = 1
-load-plugins = ["pylint_quotes"]
 unsafe-load-any-extension = "no"
 
 [tool.pylint."MESSAGES CONTROL"]
@@ -98,9 +115,6 @@ max-line-length = 120
 max-module-lines = 1000
 single-line-class-stmt = "no"
 single-line-if-stmt = "no"
-string-quote = "double-avoid-escape"
-triple-quote = "double"
-docstring-quote = "double"
 
 [tool.pylint.MISCELLANEOUS]
 notes = "TODO"
